@@ -76,7 +76,6 @@ public class Model {
 	public int liter; //the iteration at which the model was saved	
 	public int savestep; //saving period
 	public int twords; //print out top words per each topic
-	public int withrawdata;
 	
 	// Estimated/Inferenced parameters
 	public double [][] theta; //theta: document - topic distributions, size M x K
@@ -197,7 +196,8 @@ public class Model {
 			
 			String line;
 			z = new Vector[M];			
-			data = new LDADataset(M);
+			data = new LDADataset();
+            data.setM(M);
 			data.V = V;			
 			for (i = 0; i < M; i++){
 				line = reader.readLine();
@@ -274,8 +274,8 @@ public class Model {
 			
 			//write docs with topic assignments for words
 			for (i = 0; i < data.M; i++){
-				for (j = 0; j < data.docs[i].length; ++j){
-					writer.write(data.docs[i].words[j] + ":" + z[i].get(j) + " ");					
+				for (j = 0; j < data.docs.get(i).length; ++j){
+					writer.write(data.docs.get(i).words[j] + ":" + z[i].get(j) + " ");					
 				}
 				writer.write("\n");
 			}
@@ -515,7 +515,7 @@ public class Model {
 		
 		z = new Vector[M];
 		for (m = 0; m < data.M; m++){
-			int N = data.docs[m].length;
+			int N = data.docs.get(m).length;
 			z[m] = new Vector<Integer>();
 			
 			//initilize for z
@@ -524,7 +524,7 @@ public class Model {
 				z[m].add(topic);
 				
 				// number of instances of word assigned to topic j
-				nw[data.docs[m].words[n]][topic] += 1;
+				nw[data.docs.get(m).words[n]][topic] += 1;
 				// number of words in document i assigned to topic j
 				nd[m][topic] += 1;
 				// total number of words assigned to topic j
@@ -597,7 +597,7 @@ public class Model {
 		
 		z = new Vector[M];
 		for (m = 0; m < data.M; m++){
-			int N = data.docs[m].length;
+			int N = data.docs.get(m).length;
 			z[m] = new Vector<Integer>();
 			
 			//initilize for z
@@ -606,7 +606,7 @@ public class Model {
 				z[m].add(topic);
 				
 				// number of instances of word assigned to topic j
-				nw[data.docs[m].words[n]][topic] += 1;
+				nw[data.docs.get(m).words[n]][topic] += 1;
 				// number of words in document i assigned to topic j
 				nd[m][topic] += 1;
 				// total number of words assigned to topic j
@@ -687,11 +687,11 @@ public class Model {
 	    }
 	    
 	    for (m = 0; m < data.M; m++){
-	    	int N = data.docs[m].length;
+	    	int N = data.docs.get(m).length;
 	    	
 	    	// assign values for nw, nd, nwsum, and ndsum
 	    	for (n = 0; n < N; n++){
-	    		w = data.docs[m].words[n];
+	    		w = data.docs.get(m).words[n];
 	    		int topic = (Integer)z[m].get(n);
 	    		
 	    		// number of instances of word i assigned to topic j

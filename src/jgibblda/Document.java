@@ -28,6 +28,7 @@
 
 package jgibblda;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class Document {
@@ -38,6 +39,7 @@ public class Document {
 	public int [] words;
 	public String rawStr;
 	public int length;
+    public ArrayList<Integer> labels;
 	
 	//----------------------------------------------------
 	//Constructors
@@ -46,12 +48,14 @@ public class Document {
 		words = null;
 		rawStr = "";
 		length = 0;
+        labels = null;
 	}
 	
 	public Document(int length){
 		this.length = length;
 		rawStr = "";
 		words = new int[length];
+        labels = null;
 	}
 	
 	public Document(int length, int [] words){
@@ -62,6 +66,8 @@ public class Document {
 		for (int i =0 ; i < length; ++i){
 			this.words[i] = words[i];
 		}
+
+        labels = null;
 	}
 	
 	public Document(int length, int [] words, String rawStr){
@@ -72,6 +78,8 @@ public class Document {
 		for (int i =0 ; i < length; ++i){
 			this.words[i] = words[i];
 		}
+
+        labels = null;
 	}
 	
 	public Document(Vector<Integer> doc){
@@ -81,6 +89,7 @@ public class Document {
 		for (int i = 0; i < length; i++){
 			this.words[i] = doc.get(i);
 		}
+        labels = null;
 	}
 	
 	public Document(Vector<Integer> doc, String rawStr){
@@ -90,5 +99,6 @@ public class Document {
 		for (int i = 0; i < length; ++i){
 			this.words[i] = doc.get(i);
 		}
+        labels = null;
 	}
 }

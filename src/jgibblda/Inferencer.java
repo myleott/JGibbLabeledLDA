@@ -75,7 +75,7 @@ public class Inferencer {
 			
 			// for all newz_i
 			for (int m = 0; m < newModel.M; ++m){
-				for (int n = 0; n < newModel.data.docs[m].length; n++){
+				for (int n = 0; n < newModel.data.docs.get(m).length; n++){
 					// (newz_i = newz[m][n]
 					// sample from p(z_i|z_-1,w)
 					int topic = infSampling(m, n);
@@ -117,7 +117,7 @@ public class Inferencer {
 			
 			// for all newz_i
 			for (int m = 0; m < newModel.M; ++m){
-				for (int n = 0; n < newModel.data.docs[m].length; n++){
+				for (int n = 0; n < newModel.data.docs.get(m).length; n++){
 					// (newz_i = newz[m][n]
 					// sample from p(z_i|z_-1,w)
 					int topic = infSampling(m, n);
@@ -146,7 +146,7 @@ public class Inferencer {
 	protected int infSampling(int m, int n){
 		// remove z_i from the count variables
 		int topic = newModel.z[m].get(n);
-		int _w = newModel.data.docs[m].words[n];
+		int _w = newModel.data.docs.get(m).words[n];
 		int w = newModel.data.lid2gid.get(_w);
 		newModel.nw[_w][topic] -= 1;
 		newModel.nd[m][topic] -= 1;

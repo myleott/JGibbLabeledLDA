@@ -29,6 +29,7 @@
 package jgibblda;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Vector;
 
 public class Estimator {
@@ -63,7 +64,7 @@ public class Estimator {
 			
 			// for all z_i
 			for (int m = 0; m < trnModel.M; m++){				
-				for (int n = 0; n < trnModel.data.docs[m].length; n++){
+				for (int n = 0; n < trnModel.data.docs.get(m).length; n++){
 					// z_i = z[m][n]
 					// sample from p(z_i|z_-i, w)
 					int topic = sampling(m, n);
@@ -98,7 +99,8 @@ public class Estimator {
 	public int sampling(int m, int n){
 		// remove z_i from the count variable
 		int topic = trnModel.z[m].get(n);
-		int w = trnModel.data.docs[m].words[n];
+		int w = trnModel.data.docs.get(m).words[n];
+        double[] p = trnModel.p;
 		
 		trnModel.nw[w][topic] -= 1;
 		trnModel.nd[m][topic] -= 1;
@@ -107,25 +109,44 @@ public class Estimator {
 		
 		double Vbeta = trnModel.V * trnModel.beta;
 		double Kalpha = trnModel.K * trnModel.alpha;
-		
+
+        // get labels for this document and ready default p
+        ArrayList<Integer> labels = trnModel.data.docs.get(m).labels;
+
+        // determine number of possible topics for this document
+        int K_m = (labels == null) ? trnModel.K : labels.size();
+
 		//do multinominal sampling via cumulative method
-		for (int k = 0; k < trnModel.K; k++){
-			trnModel.p[k] = (trnModel.nw[w][k] + trnModel.beta)/(trnModel.nwsum[k] + Vbeta) *
-					(trnModel.nd[m][k] + trnModel.alpha)/(trnModel.ndsum[m] + Kalpha);
-		}
+        if (labels == null) {
+            for (int k = 0; k < K_m; k++){
+                p[k] = (trnModel.nw[w][k] + trnModel.beta)/(trnModel.nwsum[k] + Vbeta) *
+                       (trnModel.nd[m][k] + trnModel.alpha);// /(trnModel.ndsum[m] + Kalpha); // indep of k
+            }
+        } else {
+            int i = 0;
+            for (int k : labels) {
+                p[i++] = (trnModel.nw[w][k] + trnModel.beta)/(trnModel.nwsum[k] + Vbeta) *
+                         (trnModel.nd[m][k] + trnModel.alpha);// /(trnModel.ndsum[m] + Kalpha); // indep of k
+            }
+        }
 		
 		// cumulate multinomial parameters
-		for (int k = 1; k < trnModel.K; k++){
-			trnModel.p[k] += trnModel.p[k - 1];
+        for (int k = 1; k < K_m; k++) {
+			p[k] += p[k - 1];
 		}
 		
 		// scaled sample because of unnormalized p[]
-		double u = Math.random() * trnModel.p[trnModel.K - 1];
-		
-		for (topic = 0; topic < trnModel.K; topic++){
-			if (trnModel.p[topic] > u) //sample topic w.r.t distribution p
+		double u = Math.random() * p[K_m - 1];
+
+		for (topic = 0; topic < K_m; topic++){
+			if (p[topic] > u) //sample topic w.r.t distribution p
 				break;
 		}
+
+        // map [0, K_m - 1] topic to [0, K - 1] topic according to labels
+        if (labels != null) {
+            topic = labels.get(topic);
+        }
 		
 		// add newly estimated z_i to count variables
 		trnModel.nw[w][topic] += 1;

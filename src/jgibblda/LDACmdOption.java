@@ -40,9 +40,6 @@ public class LDACmdOption {
 	@Option(name="-twords", usage="Specify the number of most likely words to be printed for each topic")
 	public int twords = 100;
 	
-	@Option(name="-withrawdata", usage="Specify whether we include raw data in the input")
-	public boolean withrawdata = false;
-	
 	@Option(name="-wordmap", usage="Specify the wordmap file")
 	public String wordMapFileName = "wordmap.txt";
 }

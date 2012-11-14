@@ -30,6 +30,8 @@ package jgibblda;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
@@ -40,7 +42,7 @@ public class LDADataset {
 	//---------------------------------------------------------------
 	
 	public Dictionary localDict;			// local dictionary	
-	public Document [] docs; 		// a list of documents	
+	public ArrayList<Document> docs; 		// a list of documents	
 	public int M; 			 		// number of documents
 	public int V;			 		// number of words
 	
@@ -58,87 +60,112 @@ public class LDADataset {
 		localDict = new Dictionary();
 		M = 0;
 		V = 0;
-		docs = null;
+		docs = new ArrayList<Document>();
 	
 		globalDict = null;
 		lid2gid = null;
 	}
-	
-	public LDADataset(int M){
-		localDict = new Dictionary();
-		this.M = M;
-		this.V = 0;
-		docs = new Document[M];	
-		
-		globalDict = null;
-		lid2gid = null;
-	}
-	
-	public LDADataset(int M, Dictionary globalDict){
-		localDict = new Dictionary();	
-		this.M = M;
-		this.V = 0;
-		docs = new Document[M];	
-		
-		this.globalDict = globalDict;
-		lid2gid = new HashMap<Integer, Integer>();
-	}
-	
+
 	//-------------------------------------------------------------
 	//Public Instance Methods
 	//-------------------------------------------------------------
+    public void setM(int M)
+    {
+        this.M = M;
+    }
+
+    public void setDictionary(Dictionary globalDict)
+    {
+        this.globalDict = globalDict;
+		lid2gid = new HashMap<Integer, Integer>();
+    }
+
 	/**
 	 * set the document at the index idx if idx is greater than 0 and less than M
 	 * @param doc document to be set
 	 * @param idx index in the document array
 	 */	
+    public void addDoc(Document doc)
+    {
+        docs.add(doc);
+    }
 	public void setDoc(Document doc, int idx){
-		if (0 <= idx && idx < M){
-			docs[idx] = doc;
-		}
+        if (idx < docs.size()) {
+            docs.set(idx, doc);
+        } else {
+            docs.add(idx, doc);
+        }
 	}
+
 	/**
 	 * set the document at the index idx if idx is greater than 0 and less than M
 	 * @param str string contains doc
 	 * @param idx index in the document array
 	 */
+    public void addDoc(String str)
+    {
+        setDoc(str, docs.size());
+    }
 	public void setDoc(String str, int idx){
-		if (0 <= idx && idx < M){
-			String [] words = str.split("[ \\t\\n]");
-			
-			Vector<Integer> ids = new Vector<Integer>();
-			
-			for (String word : words){
-				int _id = localDict.word2id.size();
-				
-				if (localDict.contains(word))		
-					_id = localDict.getID(word);
-								
-				if (globalDict != null){
-					//get the global id					
-					Integer id = globalDict.getID(word);
-					//System.out.println(id);
-					
-					if (id != null){
-						localDict.addWord(word);
-						
-						lid2gid.put(_id, id);
-						ids.add(_id);
-					}
-					else { //not in global dictionary
-						//do nothing currently
-					}
-				}
-				else {
-					localDict.addWord(word);
-					ids.add(_id);
-				}
-			}
-			
-			Document doc = new Document(ids, str);
-			docs[idx] = doc;
-			V = localDict.word2id.size();			
-		}
+        // read document labels (if provided)
+        ArrayList<Integer> labels = null;
+        if (str.startsWith("[")) {
+            String[] labelsBoundary = str.
+                substring(1). // remove initial '['
+                split("\\]", 1); // separate labels and str between ']'
+            String[] labelStrs = labelsBoundary[0].trim().split("[ \\t\\n]");
+            str = labelsBoundary[1].trim();
+
+            labels = new ArrayList<Integer>();
+            for (String labelStr : labelStrs) {
+                try {
+                    labels.add(Integer.parseInt(labelStr));
+                } catch (NumberFormatException nfe) {
+                    System.err.println("Unknown document label ( " + labelStr + " ) for document " + idx + ".");
+                }
+            }
+            Collections.sort(labels);
+        }
+
+        String [] words = str.split("[ \\t\\n]");
+        
+        Vector<Integer> ids = new Vector<Integer>();
+        
+        for (String word : words){
+            if (word.trim().equals("")) {
+                continue;
+            }
+
+            int _id = localDict.word2id.size();
+            
+            if (localDict.contains(word))		
+                _id = localDict.getID(word);
+                            
+            if (globalDict != null){
+                //get the global id					
+                Integer id = globalDict.getID(word);
+                //System.out.println(id);
+                
+                if (id != null){
+                    localDict.addWord(word);
+                    
+                    lid2gid.put(_id, id);
+                    ids.add(_id);
+                }
+                else { //not in global dictionary
+                    //do nothing currently
+                }
+            }
+            else {
+                localDict.addWord(word);
+                ids.add(_id);
+            }
+        }
+        
+        Document doc = new Document(ids, str);
+        doc.labels = labels;
+        setDoc(doc, idx);
+        V = localDict.word2id.size();			
 	}
 	//---------------------------------------------------------------
 	// I/O methods
@@ -195,16 +222,13 @@ public class LDADataset {
 		try {
 			//read number of document
 			String line;
-			line = reader.readLine();
-			int M = Integer.parseInt(line);
-			
-			LDADataset data = new LDADataset(M);
-			for (int i = 0; i < M; ++i){
-				line = reader.readLine();
-				
-				data.setDoc(line, i);
+
+			LDADataset data = new LDADataset();
+            while ((line = reader.readLine()) != null) {
+				data.addDoc(line);
 			}
-			
+            data.setM(data.docs.size());
+
 			return data;
 		}
 		catch (Exception e){
@@ -224,16 +248,14 @@ public class LDADataset {
 		try {
 			//read number of document
 			String line;
-			line = reader.readLine();
-			int M = Integer.parseInt(line);
-			System.out.println("NewM:" + M);
 			
-			LDADataset data = new LDADataset(M, dict);
-			for (int i = 0; i < M; ++i){
-				line = reader.readLine();
-				
-				data.setDoc(line, i);
+			LDADataset data = new LDADataset();
+            data.setDictionary(dict);
+            while ((line = reader.readLine()) != null) {
+				data.addDoc(line);
 			}
+            data.setM(data.docs.size());
+			System.out.println("NewM:" + data.docs.size());
 			
 			return data;
 		}
@@ -250,7 +272,8 @@ public class LDADataset {
 	 * @return dataset if success and null otherwise
 	 */
 	public static LDADataset readDataSet(String [] strs){
-		LDADataset data = new LDADataset(strs.length);
+		LDADataset data = new LDADataset();
+        data.setM(strs.length);
 		
 		for (int i = 0 ; i < strs.length; ++i){
 			data.setDoc(strs[i], i);
@@ -266,7 +289,9 @@ public class LDADataset {
 	 */
 	public static LDADataset readDataSet(String [] strs, Dictionary dict){
 		//System.out.println("readDataset...");
-		LDADataset data = new LDADataset(strs.length, dict);
+		LDADataset data = new LDADataset();
+        data.setM(strs.length);
+        data.setDictionary(dict);
 		
 		for (int i = 0 ; i < strs.length; ++i){
 			//System.out.println("set doc " + i);
