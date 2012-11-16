@@ -33,72 +33,31 @@ import java.util.Vector;
 
 public class Document {
 
-	//----------------------------------------------------
-	//Instance Variables
-	//----------------------------------------------------
-	public int [] words;
-	public String rawStr;
-	public int length;
-    public ArrayList<Integer> labels;
-	
-	//----------------------------------------------------
-	//Constructors
-	//----------------------------------------------------
-	public Document(){
-		words = null;
-		rawStr = "";
-		length = 0;
-        labels = null;
-	}
-	
-	public Document(int length){
-		this.length = length;
-		rawStr = "";
-		words = new int[length];
-        labels = null;
-	}
-	
-	public Document(int length, int [] words){
-		this.length = length;
-		rawStr = "";
-		
-		this.words = new int[length];
-		for (int i =0 ; i < length; ++i){
-			this.words[i] = words[i];
-		}
+    //----------------------------------------------------
+    //Instance Variables
+    //----------------------------------------------------
+    public int[] words;
+    public String rawStr = "";
+    public int length;
+    public ArrayList<Integer> labels = null;
 
-        labels = null;
-	}
-	
-	public Document(int length, int [] words, String rawStr){
-		this.length = length;
-		this.rawStr = rawStr;
-		
-		this.words = new int[length];
-		for (int i =0 ; i < length; ++i){
-			this.words[i] = words[i];
-		}
+    public Document(Vector<Integer> doc){
+        this.length = doc.size();
+        this.words = new int[length];
+        for (int i = 0; i < length; i++){
+            this.words[i] = doc.get(i);
+        }
+    }
 
-        labels = null;
-	}
-	
-	public Document(Vector<Integer> doc){
-		this.length = doc.size();
-		rawStr = "";
-		this.words = new int[length];
-		for (int i = 0; i < length; i++){
-			this.words[i] = doc.get(i);
-		}
-        labels = null;
-	}
-	
-	public Document(Vector<Integer> doc, String rawStr){
-		this.length = doc.size();
-		this.rawStr = rawStr;
-		this.words = new int[length];
-		for (int i = 0; i < length; ++i){
-			this.words[i] = doc.get(i);
-		}
-        labels = null;
-	}
+    public Document(Vector<Integer> doc, String rawStr)
+    {
+        this(doc);
+        this.rawStr = rawStr;
+    }
+
+    public Document(Vector<Integer> doc, String rawStr, ArrayList<Integer> labels)
+    {
+        this(doc, rawStr);
+        this.labels = labels;
+    }
 }
