@@ -28,11 +28,14 @@
 
 package jgibblda;
 
+import java.io.FileNotFoundException;
+
 import org.kohsuke.args4j.*;
 
-public class LDA {
-
-    public static void main(String args[]){
+public class LDA
+{
+    public static void main(String args[])
+    {
         LDACmdOption option = new LDACmdOption();
         CmdLineParser parser = new CmdLineParser(option);
 
@@ -60,13 +63,14 @@ public class LDA {
                     }
                 }
             }
-        }
-        catch (CmdLineException cle){
+        } catch (CmdLineException cle){
             System.out.println("Command line error: " + cle.getMessage());
             showHelp(parser);
             return;
-        }
-        catch (Exception e){
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return;
+        } catch (Exception e){
             System.out.println("Error in main: " + e.getMessage());
             e.printStackTrace();
             return;

@@ -31,7 +31,9 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
@@ -65,7 +67,7 @@ public class Model {
     public String dir = "./";
     public String dfile = "trndocs.dat";
     public boolean unlabeled = false;
-    public String modelName = "model-final";
+    public String modelName = "model.final";
     public int modelStatus = Constants.MODEL_STATUS_UNKNOWN; // see Constants class for status of model
     public LDADataset data; // link to a dataset
 
@@ -97,12 +99,12 @@ public class Model {
     //	Constructors
     //---------------------------------------------------------------	
 
-    public Model(LDACmdOption option)
+    public Model(LDACmdOption option) throws FileNotFoundException, IOException
     {
         this(option, null);
     }
 
-    public Model(LDACmdOption option, Model trnModel)
+    public Model(LDACmdOption option, Model trnModel) throws FileNotFoundException, IOException
     {
         modelName = option.modelName;
         K = option.K;
@@ -142,17 +144,7 @@ public class Model {
         }
 
         // read in data
-        if (!data.readDataSet(dir + File.separator + dfile, unlabeled)) {
-            System.out.println("Fail to read dataset!\n");
-        }
-
-        // debug
-        if (trnModel != null) {
-            System.out.println("Dataset loaded:");
-            System.out.println("\tK:" + K);
-            System.out.println("\tM:" + M);
-            System.out.println("\tV:" + V);
-        }
+        data.readDataSet(dir + File.separator + dfile, unlabeled);
     }
 
     //---------------------------------------------------------------
@@ -173,6 +165,12 @@ public class Model {
                 System.out.println("Fail to load word-topic assignment file of the model!"); 
                 return false;
             }
+            System.out.println("Model loaded:");
+            System.out.println("\talpha:" + alpha);
+            System.out.println("\tbeta:" + beta);
+            System.out.println("\tK:" + K);
+            System.out.println("\tM:" + M);
+            System.out.println("\tV:" + V);
         }
 
         p = new double[K];
@@ -181,7 +179,10 @@ public class Model {
 
         for (int m = 0; m < data.M; m++){
             int N = data.docs.get(m).length;
-            z[m] = new Vector<Integer>();
+
+            if (random) {
+                z[m] = new Vector<Integer>();
+            }
 
             //initilize for z
             for (int n = 0; n < N; n++){
@@ -279,25 +280,25 @@ public class Model {
     /**
      * Save model
      */
-    public boolean saveModel(String modelName){
-        if (!saveModelTAssign(dir + File.separator + modelName + tassignSuffix)){
+    public boolean saveModel(String modelSuffix){
+        if (!saveModelTAssign(dir + File.separator + modelName + "." + modelSuffix + tassignSuffix)){
             return false;
         }
 
-        if (!saveModelOthers(dir + File.separator + modelName + othersSuffix)){			
+        if (!saveModelOthers(dir + File.separator + modelName + "." + modelSuffix + othersSuffix)){			
             return false;
         }
 
-        if (!saveModelTheta(dir + File.separator + modelName + thetaSuffix)){
+        if (!saveModelTheta(dir + File.separator + modelName + "." + modelSuffix + thetaSuffix)){
             return false;
         }
 
-        if (!saveModelPhi(dir + File.separator + modelName + phiSuffix)){
+        if (!saveModelPhi(dir + File.separator + modelName + "." + modelSuffix + phiSuffix)){
             return false;
         }
 
         if (twords > 0){
-            if (!saveModelTwords(dir + File.separator + modelName + twordsSuffix))
+            if (!saveModelTwords(dir + File.separator + modelName + "." + modelSuffix + twordsSuffix))
                 return false;
         }
         return true;

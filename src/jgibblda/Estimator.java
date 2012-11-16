@@ -29,17 +29,21 @@
 package jgibblda;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Vector;
 
-public class Estimator {
-
+public class Estimator
+{
     // output model
     protected Model trnModel;
     LDACmdOption option;
 
-    public Estimator(LDACmdOption option){
+    public Estimator(LDACmdOption option) throws FileNotFoundException, IOException
+    {
         this.option = option;
+
         trnModel = new Model(option);
 
         if (option.est){
@@ -51,12 +55,12 @@ public class Estimator {
         }
     }
 
-    public void estimate(){
-        System.out.println("Sampling " + trnModel.niters + " iteration!");
-
-        int lastIter = trnModel.liter;
-        for (trnModel.liter = lastIter + 1; trnModel.liter < trnModel.niters + lastIter; trnModel.liter++){
-            System.out.println("Iteration " + trnModel.liter + " ...");
+    public void estimate()
+    {
+        System.out.println("Sampling " + trnModel.niters + " iterations!");
+        System.out.print("Iteration");
+        for (int startIter = ++trnModel.liter; trnModel.liter <= startIter + trnModel.niters; trnModel.liter++){
+            System.out.format("%6d", trnModel.liter);
 
             // for all z_i
             for (int m = 0; m < trnModel.M; m++){				
@@ -68,22 +72,22 @@ public class Estimator {
                 }// end for each word
             }// end for each document
 
-            if (option.savestep > 0){
-                if (trnModel.liter % option.savestep == 0){
-                    System.out.println("Saving the model at iteration " + trnModel.liter + " ...");
-                    trnModel.updateTheta();
-                    trnModel.updatePhi();
-                    trnModel.saveModel("model-" + Conversion.ZeroPad(trnModel.liter, 5));
-                }
+            if (option.savestep > 0 && trnModel.liter % option.savestep == 0) {
+                System.out.println("\nSaving the model at iteration " + trnModel.liter);
+                trnModel.updateTheta();
+                trnModel.updatePhi();
+                trnModel.saveModel(Conversion.ZeroPad(trnModel.liter, 5));
+                System.out.print("Iteration");
+            } else {
+                System.out.print("\b\b\b\b\b\b");
             }
-        }// end iterations		
+        }// end iterations
+        trnModel.liter--;
 
-        System.out.println("Gibbs sampling completed!");
         System.out.println("Saving the final model!");
         trnModel.updateTheta();
         trnModel.updatePhi();
-        trnModel.liter--;
-        trnModel.saveModel("model-final");
+        trnModel.saveModel("final");
     }
 
     /**
@@ -92,7 +96,8 @@ public class Estimator {
      * @param n word number
      * @return topic id
      */
-    public int sampling(int m, int n){
+    public int sampling(int m, int n)
+    {
         // remove z_i from the count variable
         int topic = trnModel.z[m].get(n);
         int w = trnModel.data.docs.get(m).words[n];

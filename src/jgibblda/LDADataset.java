@@ -29,6 +29,8 @@ package jgibblda;
 
 import java.io.BufferedReader;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -155,26 +157,20 @@ public class LDADataset {
      * read a dataset from a file
      * @return true if success and false otherwise
      */
-    public boolean readDataSet(String filename, boolean unlabeled)
+    public boolean readDataSet(String filename, boolean unlabeled) throws FileNotFoundException, IOException
     {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new GZIPInputStream(
+                        new FileInputStream(filename)), "UTF-8"));
         try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(
-                        new GZIPInputStream(
-                            new FileInputStream(filename)), "UTF-8"));
-            try {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    addDoc(line, unlabeled);
-                }
-                setM(docs.size());
-                return true;
-            } finally {
-                reader.close();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                addDoc(line, unlabeled);
             }
-        } catch (Exception e){
-            System.out.println("Read Dataset Error: " + e.getMessage());
-            e.printStackTrace();
-            return false;
+            setM(docs.size());
+            return true;
+        } finally {
+            reader.close();
         }
     }
 }

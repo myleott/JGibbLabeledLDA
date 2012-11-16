@@ -31,12 +31,15 @@ package jgibblda;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
-public class Inferencer {	
+public class Inferencer
+{
     // Train model
     public Model trnModel;
     public Dictionary globalDict;
@@ -47,7 +50,8 @@ public class Inferencer {
     //-----------------------------------------------------
     // Init method
     //-----------------------------------------------------
-    public Inferencer(LDACmdOption option){
+    public Inferencer(LDACmdOption option) throws FileNotFoundException, IOException
+    {
         this.option = option;
 
         trnModel = new Model(option);
@@ -60,13 +64,15 @@ public class Inferencer {
     }
 
     //inference new model ~ getting data from a specified dataset
-    public Model inference() {
+    public Model inference() throws FileNotFoundException, IOException
+    {
         newModel = new Model(option, trnModel);
         newModel.init(true);
 
-        System.out.println("Sampling " + newModel.niters + " iteration for inference!");		
+        System.out.println("Sampling " + newModel.niters + " iterations for inference!");		
+        System.out.print("Iteration");
         for (newModel.liter = 1; newModel.liter <= newModel.niters; newModel.liter++){
-            System.out.println("Iteration " + newModel.liter + " ...");
+            System.out.format("%6d", newModel.liter);
 
             // for all newz_i
             for (int m = 0; m < newModel.M; ++m){
@@ -78,14 +84,13 @@ public class Inferencer {
                 }
             }//end foreach new doc
 
+            System.out.print("\b\b\b\b\b\b");
         }// end iterations
         newModel.liter--;
-        System.out.println("Gibbs sampling for inference completed!");
 
+        System.out.println("\nSaving the inference outputs!");
         newModel.updateTheta();
         newModel.updatePhi(trnModel);
-
-        System.out.println("Saving the inference outputs!");
         newModel.saveModel(newModel.dfile + "." + newModel.modelName);		
 
         return newModel;
@@ -96,7 +101,8 @@ public class Inferencer {
      * m: document number
      * n: word number?
      */
-    protected int infSampling(int m, int n){
+    protected int infSampling(int m, int n)
+    {
         // remove z_i from the count variables
         int topic = newModel.z[m].get(n);
         int _w = newModel.data.docs.get(m).words[n];
