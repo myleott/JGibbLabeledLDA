@@ -25,6 +25,9 @@ public class LDACmdOption {
     @Option(name="-model", usage="Specify the model name")
         public String modelName = "";
 
+    @Option(name="-modelweight", usage="Specify the integer weight of the model with respect to the new data (for -inf only)")
+        public int modelWeight = 1;
+
     @Option(name="-alpha", usage="Specify alpha")
         public double alpha = -1;
 

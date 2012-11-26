@@ -168,6 +168,12 @@ public class LDADataset {
                 addDoc(line, unlabeled);
             }
             setM(docs.size());
+
+            // debug output
+            System.out.println("Dataset loaded:");
+            System.out.println("\tM:" + M);
+            System.out.println("\tV:" + V);
+
             return true;
         } finally {
             reader.close();

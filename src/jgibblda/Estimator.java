@@ -59,7 +59,7 @@ public class Estimator
     {
         System.out.println("Sampling " + trnModel.niters + " iterations!");
         System.out.print("Iteration");
-        for (int startIter = ++trnModel.liter; trnModel.liter <= startIter + trnModel.niters; trnModel.liter++){
+        for (int startIter = ++trnModel.liter; trnModel.liter < startIter + trnModel.niters; trnModel.liter++){
             System.out.format("%6d", trnModel.liter);
 
             // for all z_i
@@ -84,7 +84,7 @@ public class Estimator
         }// end iterations
         trnModel.liter--;
 
-        System.out.println("Saving the final model!");
+        System.out.println("\nSaving the final model!");
         trnModel.updateTheta();
         trnModel.updatePhi();
         trnModel.saveModel("final");

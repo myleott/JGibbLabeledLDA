@@ -68,6 +68,7 @@ public class Model {
     public String dfile = "trndocs.dat";
     public boolean unlabeled = false;
     public String modelName = "model.final";
+    public int modelWeight = 1;
     public int modelStatus = Constants.MODEL_STATUS_UNKNOWN; // see Constants class for status of model
     public LDADataset data; // link to a dataset
 
@@ -107,6 +108,7 @@ public class Model {
     public Model(LDACmdOption option, Model trnModel) throws FileNotFoundException, IOException
     {
         modelName = option.modelName;
+        modelWeight = option.modelWeight;
         K = option.K;
 
         alpha = option.alpha;
@@ -156,16 +158,21 @@ public class Model {
      */
     public boolean init(boolean random)
     {
+        int weight = 1;
         if (random) {
             M = data.M;
             V = data.V;
             z = new Vector[M];
         } else {
+            weight = modelWeight;
+
             if (!loadModel()) {
                 System.out.println("Fail to load word-topic assignment file of the model!"); 
                 return false;
             }
-            System.out.println("Model loaded:");
+
+            // debug output
+            System.out.println("Model loaded (weight: " + weight + "):");
             System.out.println("\talpha:" + alpha);
             System.out.println("\tbeta:" + beta);
             System.out.println("\tK:" + K);
@@ -197,12 +204,12 @@ public class Model {
                     topic = (Integer)z[m].get(n);
                 }
 
-                nw[w][topic] += 1; // number of instances of word assigned to topic j
-                nd[m][topic] += 1; // number of words in document i assigned to topic j
-                nwsum[topic] += 1; // total number of words assigned to topic j
+                nw[w][topic] += weight; // number of instances of word assigned to topic j
+                nd[m][topic] += weight; // number of words in document i assigned to topic j
+                nwsum[topic] += weight; // total number of words assigned to topic j
             }
 
-            ndsum[m] = N; // total number of words in document i
+            ndsum[m] = N * weight; // total number of words in document i
         }
 
         theta = new double[M][K];		
