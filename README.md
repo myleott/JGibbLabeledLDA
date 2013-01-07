@@ -85,7 +85,7 @@ Following JGibbLDA, this code is licensed under the GPLv2. Please see the
 LICENSE file for the full license.
 
 Labeled LDA in Java
-Copyright (C) 2013 Myle Ott
+Copyright (C) 2008-2013 Myle Ott (Labeled LDA), Xuan-Hieu Phan and Cam-Tu Nguyen (JGibbLDA)
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
