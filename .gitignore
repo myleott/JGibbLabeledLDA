@@ -1,5 +1,7 @@
 Archive
 __pycache__
+.classpath
+.project
 .svn
 
 # Compiled source #
