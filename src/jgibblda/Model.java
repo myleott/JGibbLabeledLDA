@@ -51,24 +51,22 @@ public class Model {
     //	Class Variables
     //---------------------------------------------------------------
 
-    public static String tassignSuffix = ".tassign.gz";	// suffix for topic assignment file
-    public static String thetaSuffix   = ".theta.gz";   // suffix for theta (topic - document distribution) file
-    public static String phiSuffix     = ".phi.gz";     // suffix for phi file (topic - word distribution) file
-    public static String othersSuffix  = ".others.gz"; 	// suffix for containing other parameters
-    public static String twordsSuffix  = ".twords.gz";	// suffix for file containing words-per-topics
+    public static String tassignSuffix = ".tassign.gz";	 // suffix for topic assignment file
+    public static String thetaSuffix   = ".theta.gz";    // suffix for theta (topic - document distribution) file
+    public static String phiSuffix     = ".phi.gz";      // suffix for phi file (topic - word distribution) file
+    public static String othersSuffix  = ".others.gz"; 	 // suffix for containing other parameters
+    public static String twordsSuffix  = ".twords.gz";	 // suffix for file containing words-per-topics
+    public static String wordMapSuffix  = ".wordmap.gz"; // suffix for file containing word to id map
 
     //---------------------------------------------------------------
     //	Model Parameters and Variables
     //---------------------------------------------------------------
 
-    public String wordMapFile  = "wordmap.gz";  // file that contain word to id map
-    public String trainlogFile = "trainlog.gz"; // training log file	
 
     public String dir = "./";
     public String dfile = "trndocs.dat";
     public boolean unlabeled = false;
-    public String modelName = "model.final";
-    public int modelWeight = 1;
+    public String modelName = "model";
     public int modelStatus = Constants.MODEL_STATUS_UNKNOWN; // see Constants class for status of model
     public LDADataset data; // link to a dataset
 
@@ -78,8 +76,9 @@ public class Model {
     public double alpha;       // LDA hyperparameters
     public double beta = 0.01; // LDA hyperparameters
     public int niters = 1000;  // number of Gibbs sampling iteration
+    public int nburnin = 500;  // number of Gibbs sampling burn-in iterations
+    public int samplingLag = 5;// Gibbs sampling sample lag
     public int liter = 0;      // the iteration at which the model was saved	
-    public int savestep = 100; // saving period
     public int twords = 20;    // print out top words per each topic
 
     // Estimated/Inferenced parameters
@@ -92,6 +91,9 @@ public class Model {
     protected int[][] nd = null;       // nd[i][j]: number of words in document i assigned to topic j, size M x K
     protected int[] nwsum = null;      // nwsum[j]: total number of words assigned to topic j, size K
     protected int[] ndsum = null;      // ndsum[i]: total number of words in document i, size M
+
+    protected int[][][] nw_inf = null;       // nw[m][i][j]: number of instances of word/term i assigned to topic j in doc m, size M x V x K
+    protected int[][] nwsum_inf = null;      // nwsum[m][j]: total number of words assigned to topic j in doc m, size M x K
 
     // temp variables for sampling
     protected double[] p = null; 
@@ -108,7 +110,6 @@ public class Model {
     public Model(LDACmdOption option, Model trnModel) throws FileNotFoundException, IOException
     {
         modelName = option.modelName;
-        modelWeight = option.modelWeight;
         K = option.K;
 
         alpha = option.alpha;
@@ -119,7 +120,8 @@ public class Model {
             beta = option.beta;
 
         niters = option.niters;
-        savestep = option.savestep;
+        nburnin = option.nburnin;
+        samplingLag = option.samplingLag;
 
         dir = option.dir;
         if (dir.endsWith(File.separator))
@@ -128,7 +130,6 @@ public class Model {
         dfile = option.dfile;
         unlabeled = option.unlabeled;
         twords = option.twords;
-        wordMapFile = option.wordMapFileName;
 
         // initialize dataset
         data = new LDADataset();
@@ -158,21 +159,18 @@ public class Model {
      */
     public boolean init(boolean random)
     {
-        int weight = 1;
         if (random) {
             M = data.M;
             V = data.V;
             z = new Vector[M];
         } else {
-            weight = modelWeight;
-
             if (!loadModel()) {
                 System.out.println("Fail to load word-topic assignment file of the model!"); 
                 return false;
             }
 
             // debug output
-            System.out.println("Model loaded (weight: " + weight + "):");
+            System.out.println("Model loaded:");
             System.out.println("\talpha:" + alpha);
             System.out.println("\tbeta:" + beta);
             System.out.println("\tK:" + K);
@@ -204,16 +202,36 @@ public class Model {
                     topic = (Integer)z[m].get(n);
                 }
 
-                nw[w][topic] += weight; // number of instances of word assigned to topic j
-                nd[m][topic] += weight; // number of words in document i assigned to topic j
-                nwsum[topic] += weight; // total number of words assigned to topic j
+                nw[w][topic]++; // number of instances of word assigned to topic j
+                nd[m][topic]++; // number of words in document i assigned to topic j
+                nwsum[topic]++; // total number of words assigned to topic j
             }
 
-            ndsum[m] = N * weight; // total number of words in document i
+            ndsum[m] = N; // total number of words in document i
         }
 
         theta = new double[M][K];		
         phi = new double[K][V];
+
+        return true;
+    }
+
+    public boolean initInf()
+    {
+        initSSInf();
+
+        for (int m = 0; m < data.M; m++){
+            int N = data.docs.get(m).length;
+
+            //initilize for z
+            for (int n = 0; n < N; n++){
+                int w = data.docs.get(m).words[n];
+                int topic = (Integer)z[m].get(n);
+
+                nw_inf[m][w][topic]++; // number of instances of word assigned to topic j in doc m
+                nwsum_inf[m][topic]++; // total number of words assigned to topic j in doc m
+            }
+        }
 
         return true;
     }
@@ -248,6 +266,25 @@ public class Model {
         }
     }
 
+    protected void initSSInf()
+    {
+        nw_inf = new int[M][V][K];
+        for (int m = 0; m < M; m++) {
+            for (int w = 0; w < V; w++) {
+                for (int k = 0; k < K; k++) {
+                    nw_inf[m][w][k] = 0;
+                }
+            }
+        }
+
+        nwsum_inf = new int[M][K];
+        for (int m = 0; m < M; m++) {
+            for (int k = 0; k < K; k++) {
+                nwsum_inf[m][k] = 0;
+            }
+        }
+    }
+
     //---------------------------------------------------------------
     //	Update Methods
     //---------------------------------------------------------------
@@ -255,14 +292,16 @@ public class Model {
     public void updateTheta(){
         for (int m = 0; m < M; m++){
             for (int k = 0; k < K; k++){
-                theta[m][k] = (nd[m][k] + alpha) / (ndsum[m] + K * alpha);
+                //theta[m][k] = (nd[m][k] + alpha) / (ndsum[m] + K * alpha);
+                theta[m][k] += nd[m][k];
             }
         }
     }
     public void updatePhi(){
         for (int k = 0; k < K; k++){
             for (int w = 0; w < V; w++){
-                phi[k][w] = (nw[w][k] + beta) / (nwsum[k] + V * beta);
+                //phi[k][w] = (nw[w][k] + beta) / (nwsum[k] + V * beta);
+                phi[k][w] += nw[w][k];
             }
         }
     }
@@ -272,9 +311,9 @@ public class Model {
         for (int k = 0; k < K; k++){
             for (int _w = 0; _w < V; _w++){
                 Integer id = data.lid2gid.get(_w);
-
                 if (id != null){
-                    phi[k][_w] = (trnModel.nw[id][k] + nw[_w][k] + beta) / (nwsum[k] + nwsum[k] + trnModel.V * beta);
+                    //phi[k][_w] = (trnModel.nw[id][k] + nw[_w][k] + beta) / (nwsum[k] + nwsum[k] + trnModel.V * beta);
+                    phi[k][_w] += trnModel.nw[id][k];
                 }
             }//end foreach word
         }// end foreach topic
@@ -287,34 +326,45 @@ public class Model {
     /**
      * Save model
      */
-    public boolean saveModel(String modelSuffix){
-        if (!saveModelTAssign(dir + File.separator + modelName + "." + modelSuffix + tassignSuffix)){
+    public boolean saveModel()
+    {
+        return saveModel("");
+    }
+    public boolean saveModel(String modelPrefix)
+    {
+        if (!saveModelTAssign(dir + File.separator + modelPrefix + modelName + tassignSuffix)) {
             return false;
         }
 
-        if (!saveModelOthers(dir + File.separator + modelName + "." + modelSuffix + othersSuffix)){			
+        if (!saveModelOthers(dir + File.separator + modelPrefix + modelName + othersSuffix)) {
             return false;
         }
 
-        //if (!saveModelTheta(dir + File.separator + modelName + "." + modelSuffix + thetaSuffix)){
+        if (!saveModelTheta(dir + File.separator + modelPrefix + modelName + thetaSuffix)) {
+            return false;
+        }
+
+        //if (!saveModelPhi(dir + File.separator + modelPrefix + modelName + phiSuffix)) {
         //    return false;
         //}
 
-        //if (!saveModelPhi(dir + File.separator + modelName + "." + modelSuffix + phiSuffix)){
-        //    return false;
-        //}
-
-        if (twords > 0){
-            if (!saveModelTwords(dir + File.separator + modelName + "." + modelSuffix + twordsSuffix))
+        if (twords > 0) {
+            if (!saveModelTwords(dir + File.separator + modelPrefix + modelName + twordsSuffix)) {
                 return false;
+            }
         }
+
+        if (!data.localDict.writeWordMap(dir + File.separator + modelPrefix + modelName + wordMapSuffix)) {
+            return false;
+        }
+
         return true;
     }
 
     /**
      * Save word-topic assignments for this model
      */
-    public boolean saveModelTAssign(String filename){
+    public boolean saveModelTAssign(String filename) {
         int i, j;
 
         try{
@@ -323,16 +373,16 @@ public class Model {
                             new FileOutputStream(filename)), "UTF-8"));
 
             //write docs with topic assignments for words
-            for (i = 0; i < data.M; i++){
-                for (j = 0; j < data.docs.get(i).length; ++j){
-                    writer.write(data.docs.get(i).words[j] + ":" + z[i].get(j) + " ");					
+            for (i = 0; i < data.M; i++) {
+                for (j = 0; j < data.docs.get(i).length; ++j) {
+                    writer.write(data.docs.get(i).words[j] + ":" + z[i].get(j) + " ");
                 }
                 writer.write("\n");
             }
 
             writer.close();
         }
-        catch (Exception e){
+        catch (Exception e) {
             System.out.println("Error while saving model tassign: " + e.getMessage());
             e.printStackTrace();
             return false;
@@ -343,15 +393,17 @@ public class Model {
     /**
      * Save theta (topic distribution) for this model
      */
-    public boolean saveModelTheta(String filename){
+    public boolean saveModelTheta(String filename) {
         try{
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                         new GZIPOutputStream(
                             new FileOutputStream(filename)), "UTF-8"));
 
-            for (int i = 0; i < M; i++){
-                for (int j = 0; j < K; j++){
-                    writer.write(theta[i][j] + " ");
+            for (int i = 0; i < M; i++) {
+                for (int j = 0; j < K; j++) {
+                    if (theta[i][j] > 0) {
+                        writer.write(j + ":" + theta[i][j] + " ");
+                    }
                 }
                 writer.write("\n");
             }
@@ -368,21 +420,24 @@ public class Model {
     /**
      * Save word-topic distribution
      */
-    public boolean saveModelPhi(String filename){
+    public boolean saveModelPhi(String filename)
+    {
         try {
             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(
                         new GZIPOutputStream(
                             new FileOutputStream(filename)), "UTF-8"));
 
-            for (int i = 0; i < K; i++){
-                for (int j = 0; j < V; j++){
-                    writer.write(phi[i][j] + " ");
+            for (int i = 0; i < K; i++) {
+                for (int j = 0; j < V; j++) {
+                    if (phi[i][j] > 0) {
+                        writer.write(j + ":" + phi[i][j] + " ");
+                    }
                 }
                 writer.write("\n");
             }
             writer.close();
         }
-        catch (Exception e){
+        catch (Exception e) {
             System.out.println("Error while saving word-topic distribution:" + e.getMessage());
             e.printStackTrace();
             return false;
@@ -438,14 +493,14 @@ public class Model {
                 }//end foreach word
 
                 //print topic				
-                writer.write("Topic " + k + "th:\n");
+                writer.write("Topic " + k + ":\n");
                 Collections.sort(wordsProbsList);
 
                 for (int i = 0; i < twords; i++){
                     if (data.localDict.contains((Integer)wordsProbsList.get(i).first)){
                         String word = data.localDict.getWord((Integer)wordsProbsList.get(i).first);
 
-                        writer.write("\t" + word + " " + wordsProbsList.get(i).second + "\n");
+                        writer.write("\t" + word + "\t" + wordsProbsList.get(i).second + "\n");
                     }
                 }
             } //end foreach topic			
@@ -472,7 +527,7 @@ public class Model {
 
         // read dictionary
         Dictionary dict = new Dictionary();
-        if (!dict.readWordMap(dir + File.separator + wordMapFile))
+        if (!dict.readWordMap(dir + File.separator + modelName + wordMapSuffix))
             return false;
 
         data.localDict = dict;
@@ -535,7 +590,8 @@ public class Model {
     /**
      * Load word-topic assignments for this model
      */
-    protected boolean readTAssignFile(String tassignFile){
+    protected boolean readTAssignFile(String tassignFile)
+    {
         try {
             int i,j;
             BufferedReader reader = new BufferedReader(new InputStreamReader(

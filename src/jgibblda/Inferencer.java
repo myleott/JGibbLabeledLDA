@@ -68,6 +68,8 @@ public class Inferencer
     {
         newModel = new Model(option, trnModel);
         newModel.init(true);
+        newModel.initInf();
+        newModel.updatePhi(trnModel);
 
         System.out.println("Sampling " + newModel.niters + " iterations for inference!");		
         System.out.print("Iteration");
@@ -77,21 +79,28 @@ public class Inferencer
             // for all newz_i
             for (int m = 0; m < newModel.M; ++m){
                 for (int n = 0; n < newModel.data.docs.get(m).length; n++){
-                    // (newz_i = newz[m][n]
                     // sample from p(z_i|z_-1,w)
                     int topic = infSampling(m, n);
                     newModel.z[m].set(n, topic);
                 }
             }//end foreach new doc
 
+            if ((newModel.liter == newModel.niters) ||
+                    (newModel.liter > newModel.nburnin && newModel.liter % newModel.samplingLag == 0)) {
+                newModel.updateTheta();
+                newModel.updatePhi();
+            }
+
             System.out.print("\b\b\b\b\b\b");
         }// end iterations
         newModel.liter--;
 
         System.out.println("\nSaving the inference outputs!");
-        newModel.updateTheta();
-        newModel.updatePhi(trnModel);
-        newModel.saveModel(newModel.dfile);// + "." + newModel.modelName);		
+        String outputPrefix = newModel.dfile;
+        if (outputPrefix.endsWith(".gz")) {
+            outputPrefix = outputPrefix.substring(0, outputPrefix.length() - 3);
+        }
+        newModel.saveModel(outputPrefix + ".");
 
         return newModel;
     }
@@ -107,15 +116,18 @@ public class Inferencer
         int topic = newModel.z[m].get(n);
         int _w = newModel.data.docs.get(m).words[n];
         int w = newModel.data.lid2gid.get(_w);
-        double[] p = newModel.p;
 
         newModel.nw[_w][topic] -= 1;
         newModel.nd[m][topic] -= 1;
         newModel.nwsum[topic] -= 1;
         newModel.ndsum[m] -= 1;
 
+        if (option.infSeparately) {
+            newModel.nw_inf[m][_w][topic] -= 1;
+            newModel.nwsum_inf[m][topic] -= 1;
+        }
+
         double Vbeta = trnModel.V * newModel.beta;
-        double Kalpha = trnModel.K * newModel.alpha;
 
         // get labels for this document
         ArrayList<Integer> labels = newModel.data.docs.get(m).labels;
@@ -123,21 +135,26 @@ public class Inferencer
         // determine number of possible topics for this document
         int K_m = (labels == null) ? newModel.K : labels.size();
 
-        // do multinomial sampling via cummulative method		
-        if (labels == null) {
-            for (int k = 0; k < K_m; k++){			
-                p[k] = (trnModel.nw[w][k] + newModel.nw[_w][k] + newModel.beta)/(trnModel.nwsum[k] +  newModel.nwsum[k] + Vbeta) *
-                    (newModel.nd[m][k] + newModel.alpha);// /(newModel.ndsum[m] + Kalpha); // indep of k
+        // do multinomial sampling via cumulative method		
+        double[] p = newModel.p;
+        for (int k = 0; k < K_m; k++) {
+            topic = labels == null ? k : labels.get(k);
+
+            int nw_k, nwsum_k;
+            if (option.infSeparately) {
+                nw_k = newModel.nw_inf[m][_w][topic];
+                nwsum_k = newModel.nwsum_inf[m][topic];
+            } else {
+                nw_k = newModel.nw[_w][topic];
+                nwsum_k = newModel.nwsum[topic];
             }
-        } else {
-            int i = 0;
-            for (int k : labels) {
-                p[i++] = (trnModel.nw[w][k] + newModel.nw[_w][k] + newModel.beta)/(trnModel.nwsum[k] +  newModel.nwsum[k] + Vbeta) *
-                    (newModel.nd[m][k] + newModel.alpha);// /(newModel.ndsum[m] + Kalpha); // indep of k
-            }
+
+            p[topic] = (newModel.nd[m][topic] + newModel.alpha) *
+                (trnModel.nw[w][topic] + nw_k + newModel.beta) /
+                (trnModel.nwsum[topic] + nwsum_k + Vbeta);
         }
 
-        // cummulate multinomial parameters
+        // cumulate multinomial parameters
         for (int k = 1; k < K_m; k++){
             p[k] += p[k - 1];
         }
@@ -160,6 +177,11 @@ public class Inferencer
         newModel.nd[m][topic] += 1;
         newModel.nwsum[topic] += 1;
         newModel.ndsum[m] += 1;
+
+        if (option.infSeparately) {
+            newModel.nw_inf[m][_w][topic] += 1;
+            newModel.nwsum_inf[m][topic] += 1;
+        }
 
         return topic;
     }

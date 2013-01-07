@@ -66,12 +66,15 @@ Please see the [JGibbLDA usage](http://jgibblda.sourceforge.net/#_2.2._Command_L
 
 *   New options have been added:
 
-    **-unlabeled**: Ignore document labels, i.e., treat every document as unlabeled.
+    **-infseparately**: Inference is done separately for each document, as if
+    inference for each document was performed in isolation.
 
-    **-modelweight N** (for -inf only): Multiplies the weight of a trained model
-    by an integer factor. Useful to prevent topic drift in cases where the
-    number of new documents (-inf) is similar to or larger than the number of
-    original training documents (-est).
+    **-unlabeled**: Ignore document labels, i.e., treat every document as
+    unlabeled.
+
+*   Some options have been deleted:
+
+    **-wordmap**: Filename is automatically built based on model path.
 
 Contact
 -------

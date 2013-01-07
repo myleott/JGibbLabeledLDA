@@ -48,7 +48,6 @@ public class Estimator
 
         if (option.est){
             trnModel.init(true);
-            trnModel.data.localDict.writeWordMap(option.dir + File.separator + option.wordMapFileName);
         }
         else if (option.estc){
             trnModel.init(false);
@@ -59,7 +58,7 @@ public class Estimator
     {
         System.out.println("Sampling " + trnModel.niters + " iterations!");
         System.out.print("Iteration");
-        for (int startIter = ++trnModel.liter; trnModel.liter < startIter + trnModel.niters; trnModel.liter++){
+        for (int startIter = ++trnModel.liter; trnModel.liter <= startIter - 1 + trnModel.niters; trnModel.liter++){
             System.out.format("%6d", trnModel.liter);
 
             // for all z_i
@@ -72,22 +71,18 @@ public class Estimator
                 }// end for each word
             }// end for each document
 
-            if (option.savestep > 0 && trnModel.liter % option.savestep == 0) {
-                System.out.println("\nSaving the model at iteration " + trnModel.liter);
+            if ((trnModel.liter == startIter - 1 + trnModel.niters) ||
+                    (trnModel.liter > trnModel.nburnin && trnModel.liter % trnModel.samplingLag == 0)) {
                 trnModel.updateTheta();
                 trnModel.updatePhi();
-                trnModel.saveModel(Conversion.ZeroPad(trnModel.liter, 5));
-                System.out.print("Iteration");
-            } else {
-                System.out.print("\b\b\b\b\b\b");
             }
+
+            System.out.print("\b\b\b\b\b\b");
         }// end iterations
         trnModel.liter--;
 
         System.out.println("\nSaving the final model!");
-        trnModel.updateTheta();
-        trnModel.updatePhi();
-        trnModel.saveModel("final");
+        trnModel.saveModel();
     }
 
     /**
@@ -101,7 +96,6 @@ public class Estimator
         // remove z_i from the count variable
         int topic = trnModel.z[m].get(n);
         int w = trnModel.data.docs.get(m).words[n];
-        double[] p = trnModel.p;
 
         trnModel.nw[w][topic] -= 1;
         trnModel.nd[m][topic] -= 1;
@@ -117,18 +111,14 @@ public class Estimator
         // determine number of possible topics for this document
         int K_m = (labels == null) ? trnModel.K : labels.size();
 
-        //do multinominal sampling via cumulative method
-        if (labels == null) {
-            for (int k = 0; k < K_m; k++){
-                p[k] = (trnModel.nw[w][k] + trnModel.beta)/(trnModel.nwsum[k] + Vbeta) *
-                       (trnModel.nd[m][k] + trnModel.alpha);// /(trnModel.ndsum[m] + Kalpha); // indep of k
-            }
-        } else {
-            int i = 0;
-            for (int k : labels) {
-                p[i++] = (trnModel.nw[w][k] + trnModel.beta)/(trnModel.nwsum[k] + Vbeta) *
-                         (trnModel.nd[m][k] + trnModel.alpha);// /(trnModel.ndsum[m] + Kalpha); // indep of k
-            }
+        // do multinominal sampling via cumulative method
+        double[] p = trnModel.p;
+        for (int k = 0; k < K_m; k++) {
+            topic = labels == null ? k : labels.get(k);
+
+            p[topic] = (trnModel.nd[m][topic] + trnModel.alpha) *
+                (trnModel.nw[w][topic] + trnModel.beta) /
+                (trnModel.nwsum[topic] + Vbeta);
         }
 
         // cumulate multinomial parameters

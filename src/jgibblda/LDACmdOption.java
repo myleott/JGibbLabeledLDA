@@ -13,6 +13,9 @@ public class LDACmdOption {
     @Option(name="-inf", usage="Specify whether we want to do inference")
         public boolean inf = true;
 
+    @Option(name="-infseparately", usage="Do inference for each document separately")
+        public boolean infSeparately = false;
+
     @Option(name="-unlabeled", usage="Ignore document labels")
         public boolean unlabeled = false;
 
@@ -24,9 +27,6 @@ public class LDACmdOption {
 
     @Option(name="-model", usage="Specify the model name")
         public String modelName = "";
-
-    @Option(name="-modelweight", usage="Specify the integer weight of the model with respect to the new data (for -inf only)")
-        public int modelWeight = 1;
 
     @Option(name="-alpha", usage="Specify alpha")
         public double alpha = -1;
@@ -40,12 +40,12 @@ public class LDACmdOption {
     @Option(name="-niters", usage="Specify the number of iterations")
         public int niters = 1000;
 
-    @Option(name="-savestep", usage="Specify the number of steps to save the model since the last save")
-        public int savestep = 100;
+    @Option(name="-nburnin", usage="Specify the number of burn-in iterations")
+        public int nburnin = 500;
+
+    @Option(name="-samplinglag", usage="Specify the sampling lag")
+        public int samplingLag = 5;
 
     @Option(name="-twords", usage="Specify the number of most likely words to be printed for each topic")
         public int twords = 100;
-
-    @Option(name="-wordmap", usage="Specify the wordmap file")
-        public String wordMapFileName = "wordmap.gz";
 }
