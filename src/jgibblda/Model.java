@@ -296,13 +296,13 @@ public class Model {
             return false;
         }
 
-        if (!saveModelTheta(dir + File.separator + modelName + "." + modelSuffix + thetaSuffix)){
-            return false;
-        }
+        //if (!saveModelTheta(dir + File.separator + modelName + "." + modelSuffix + thetaSuffix)){
+        //    return false;
+        //}
 
-        if (!saveModelPhi(dir + File.separator + modelName + "." + modelSuffix + phiSuffix)){
-            return false;
-        }
+        //if (!saveModelPhi(dir + File.separator + modelName + "." + modelSuffix + phiSuffix)){
+        //    return false;
+        //}
 
         if (twords > 0){
             if (!saveModelTwords(dir + File.separator + modelName + "." + modelSuffix + twordsSuffix))

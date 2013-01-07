@@ -91,7 +91,7 @@ public class Inferencer
         System.out.println("\nSaving the inference outputs!");
         newModel.updateTheta();
         newModel.updatePhi(trnModel);
-        newModel.saveModel(newModel.dfile + "." + newModel.modelName);		
+        newModel.saveModel(newModel.dfile);// + "." + newModel.modelName);		
 
         return newModel;
     }

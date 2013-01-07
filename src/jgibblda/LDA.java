@@ -54,14 +54,6 @@ public class LDA
             else if (option.inf){
                 Inferencer inferencer = new Inferencer(option);
                 Model newModel = inferencer.inference();
-
-                for (int i = 0; i < newModel.phi.length; ++i){
-                    //phi: K * V
-                    System.out.println("-----------------------\ntopic" + i  + " : ");
-                    for (int j = 0; j < 10; ++j){
-                        System.out.println(inferencer.globalDict.id2word.get(j) + "\t" + newModel.phi[i][j]);
-                    }
-                }
             }
         } catch (CmdLineException cle){
             System.out.println("Command line error: " + cle.getMessage());
