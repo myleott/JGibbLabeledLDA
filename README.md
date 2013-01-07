@@ -1,0 +1,79 @@
+Labeled LDA in Java (based on JGibbLDA)
+=======================================
+
+This is a Java implementation of Labeled LDA based on the popular
+[JGibbLDA](http://jgibblda.sourceforge.net/) package. The code has been heavily
+refactored and a few additional options have been added. See sections below for
+more details.
+
+Data Format
+-----------
+
+The input data format is similar to the [JGibbLDA input data
+format](http://jgibblda.sourceforge.net/#_2.3._Input_Data_Format), with some
+minor cosmetic changes and additional support for document labels necessary for
+Labeled LDA. We first describe the (modified) input format for unlabeled
+documents, followed by the (new) input format for labeled documents.
+
+**Changed from JGibbLDA**: All input/output files must be Gzipped.
+
+### Unlabeled Documents
+
+Unlabeled documents have the following format:
+
+    document_1
+    document_2
+    ...
+    document_m
+
+where each document is a space-separated list of terms, i.e.,:
+
+    document_i = term_1 term_2 ... term_n
+
+**Changed from JGibbLDA**: The first line *should not* be an integer indicating
+the number of documents in the file. The original JGibbLDA code has been
+modified to identify the number of documents automatically.
+
+**Note**: Labeled and unlabeled documents may be mixed in the input file, thus
+you must ensure that unlabeled documents do not begin with a left square bracket
+(see Labeled Document input format below). One easy fix is to prepend a space
+character (' ') to each unlabeled document line.
+
+### Labeled Documents
+
+Labeled documents follow a format similar to unlabeled documents, but the with
+labels given at the beginning of each line and surrounded by square brackets,
+e.g.:
+
+    [label_1,1 label_1,2 ... label_1,l_1] document_1
+    [label_2,1 label_2,2 ... label_2,l_2] document_2
+    ...
+    [label_m,1 label_m,2 ... label_m,l_m] document_m
+
+where each label is an integer in the range [0, K-1], for K equal to the number
+of topics (-ntopics).
+
+**Note**: Labeled and unlabeled documents may be mixed in the input file. An
+unlabeled document is equivalent to labeling a document with every label in the
+range [0, K-1].
+
+Usage
+-----
+
+Please see the [JGibbLDA usage](http://jgibblda.sourceforge.net/#_2.2._Command_Line_&_Input_Parameter), noting the following changes:
+
+*   All input files must be Gzipped. All output files are also Gzipped.
+
+*   New options have been added:
+
+    **-unlabeled**: Ignore document labels, i.e., treat every document as unlabeled.
+
+    **-modelweight N** (for -inf only): Multiplies the weight of a trained model
+    by an integer factor. Useful to prevent topic drift in cases where the
+    number of new documents (-inf) is similar to or larger than the number of
+    original training documents (-est).
+
+Contact
+-------
+
+Please direct questions to [Myle Ott](myleott@gmail.com).

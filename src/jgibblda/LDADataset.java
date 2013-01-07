@@ -35,6 +35,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Vector;
 import java.util.zip.GZIPInputStream;
@@ -95,19 +96,21 @@ public class LDADataset {
             String[] labelsBoundary = str.
                 substring(1). // remove initial '['
                 split("]", 2); // separate labels and str between ']'
-            String[] labelStrs = labelsBoundary[0].trim().split("[ \\t\\n]");
+            String[] labelStrs = labelsBoundary[0].trim().split("[ \\t]");
             str = labelsBoundary[1].trim();
 
             // parse labels (unless we're ignoring the labels)
             if (!unlabeled) {
-                labels = new ArrayList<Integer>();
+                // store labels in a HashSet to ensure uniqueness
+                HashSet<Integer> label_set = new HashSet<Integer>();
                 for (String labelStr : labelStrs) {
                     try {
-                        labels.add(Integer.parseInt(labelStr));
+                        label_set.add(Integer.parseInt(labelStr));
                     } catch (NumberFormatException nfe) {
                         System.err.println("Unknown document label ( " + labelStr + " ) for document " + docs.size() + ".");
                     }
                 }
+                labels = new ArrayList<Integer>(label_set);
                 Collections.sort(labels);
             }
         }
