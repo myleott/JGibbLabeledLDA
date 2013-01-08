@@ -28,8 +28,7 @@
 
 package jgibblda;
 
-import java.util.ArrayList;
-import java.util.Vector;
+import gnu.trove.list.array.TIntArrayList;
 
 public class Document {
 
@@ -39,9 +38,9 @@ public class Document {
     public int[] words;
     public String rawStr = "";
     public int length;
-    public ArrayList<Integer> labels = null;
+    public int[] labels = null;
 
-    public Document(Vector<Integer> doc){
+    public Document(TIntArrayList doc){
         this.length = doc.size();
         this.words = new int[length];
         for (int i = 0; i < length; i++){
@@ -49,15 +48,15 @@ public class Document {
         }
     }
 
-    public Document(Vector<Integer> doc, String rawStr)
+    public Document(TIntArrayList doc, String rawStr)
     {
         this(doc);
         this.rawStr = rawStr;
     }
 
-    public Document(Vector<Integer> doc, String rawStr, ArrayList<Integer> labels)
+    public Document(TIntArrayList doc, String rawStr, TIntArrayList tlabels)
     {
         this(doc, rawStr);
-        this.labels = labels;
+        this.labels = tlabels != null ? tlabels.toArray() : null;
     }
 }

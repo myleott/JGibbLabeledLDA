@@ -28,11 +28,8 @@
 
 package jgibblda;
 
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Vector;
 
 public class Estimator
 {
@@ -103,18 +100,17 @@ public class Estimator
         trnModel.ndsum[m] -= 1;
 
         double Vbeta = trnModel.V * trnModel.beta;
-        double Kalpha = trnModel.K * trnModel.alpha;
 
         // get labels for this document
-        ArrayList<Integer> labels = trnModel.data.docs.get(m).labels;
+        int[] labels = trnModel.data.docs.get(m).labels;
 
         // determine number of possible topics for this document
-        int K_m = (labels == null) ? trnModel.K : labels.size();
+        int K_m = (labels == null) ? trnModel.K : labels.length;
 
         // do multinominal sampling via cumulative method
         double[] p = trnModel.p;
         for (int k = 0; k < K_m; k++) {
-            topic = labels == null ? k : labels.get(k);
+            topic = labels == null ? k : labels[k];
 
             p[topic] = (trnModel.nd[m][topic] + trnModel.alpha) *
                 (trnModel.nw[w][topic] + trnModel.beta) /
@@ -136,7 +132,7 @@ public class Estimator
 
         // map [0, K_m - 1] topic to [0, K - 1] topic according to labels
         if (labels != null) {
-            topic = labels.get(topic);
+            topic = labels[topic];
         }
 
         // add newly estimated z_i to count variables

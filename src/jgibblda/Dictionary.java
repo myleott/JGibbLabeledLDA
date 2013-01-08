@@ -33,24 +33,23 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.StringTokenizer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import gnu.trove.map.hash.TObjectIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
+
 public class Dictionary {
-    public Map<String,Integer> word2id;
-    public Map<Integer, String> id2word;
+    public TObjectIntHashMap<String> word2id;
+    public TIntObjectHashMap<String> id2word;
 
     //--------------------------------------------------
     // constructors
     //--------------------------------------------------
 
     public Dictionary(){
-        word2id = new HashMap<String, Integer>();
-        id2word = new HashMap<Integer, String>();
+        word2id = new TObjectIntHashMap<String>();
+        id2word = new TIntObjectHashMap<String>();
     }
 
     //---------------------------------------------------
@@ -61,7 +60,7 @@ public class Dictionary {
         return id2word.get(id);
     }
 
-    public Integer getID (String word){
+    public int getID(String word){
         return word2id.get(word);
     }
 
@@ -136,7 +135,7 @@ public class Dictionary {
 
             //write word to id
             for (int i = 0; i < id2word.size(); i++) {
-                writer.write(id2word.get(new Integer(i)) + "\n");
+                writer.write(id2word.get(i) + "\n");
             }
 
             writer.close();

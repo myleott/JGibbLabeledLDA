@@ -38,12 +38,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
 import java.util.StringTokenizer;
-import java.util.Vector;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
+
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 public class Model {	
 
@@ -86,13 +86,13 @@ public class Model {
     public double[][] phi = null;   // phi: topic-word distributions, size K x V
 
     // Temp variables while sampling
-    public Vector<Integer>[] z = null; // topic assignments for words, size M x doc.size()
+    public TIntArrayList[] z = null; // topic assignments for words, size M x doc.size()
     protected int[][] nw = null;       // nw[i][j]: number of instances of word/term i assigned to topic j, size V x K
     protected int[][] nd = null;       // nd[i][j]: number of words in document i assigned to topic j, size M x K
     protected int[] nwsum = null;      // nwsum[j]: total number of words assigned to topic j, size K
     protected int[] ndsum = null;      // ndsum[i]: total number of words in document i, size M
 
-    protected int[][][] nw_inf = null;       // nw[m][i][j]: number of instances of word/term i assigned to topic j in doc m, size M x V x K
+    protected ArrayList<TIntObjectHashMap<int[]>> nw_inf = null;       // nw[m][i][j]: number of instances of word/term i assigned to topic j in doc m, size M x V x K
     protected int[][] nwsum_inf = null;      // nwsum[m][j]: total number of words assigned to topic j in doc m, size M x K
 
     // temp variables for sampling
@@ -162,7 +162,7 @@ public class Model {
         if (random) {
             M = data.M;
             V = data.V;
-            z = new Vector[M];
+            z = new TIntArrayList[M];
         } else {
             if (!loadModel()) {
                 System.out.println("Fail to load word-topic assignment file of the model!"); 
@@ -183,13 +183,12 @@ public class Model {
         initSS();
 
         for (int m = 0; m < data.M; m++){
-            int N = data.docs.get(m).length;
-
             if (random) {
-                z[m] = new Vector<Integer>();
+                z[m] = new TIntArrayList();
             }
 
-            //initilize for z
+            // initilize for z
+            int N = data.docs.get(m).length;
             for (int n = 0; n < N; n++){
                 int w = data.docs.get(m).words[n];
                 int topic;
@@ -199,7 +198,7 @@ public class Model {
                     topic = (int)Math.floor(Math.random() * K);
                     z[m].add(topic);
                 } else {
-                    topic = (Integer)z[m].get(n);
+                    topic = z[m].get(n);
                 }
 
                 nw[w][topic]++; // number of instances of word assigned to topic j
@@ -218,17 +217,34 @@ public class Model {
 
     public boolean initInf()
     {
-        initSSInf();
+        nw_inf = new ArrayList<TIntObjectHashMap<int[]>>();
+
+        nwsum_inf = new int[M][K];
+        for (int m = 0; m < M; m++) {
+            for (int k = 0; k < K; k++) {
+                nwsum_inf[m][k] = 0;
+            }
+        }
 
         for (int m = 0; m < data.M; m++){
-            int N = data.docs.get(m).length;
+            nw_inf.add(m, new TIntObjectHashMap<int[]>());
 
-            //initilize for z
+            // initilize for z
+            int N = data.docs.get(m).length;
             for (int n = 0; n < N; n++){
                 int w = data.docs.get(m).words[n];
-                int topic = (Integer)z[m].get(n);
+                int topic = z[m].get(n);
 
-                nw_inf[m][w][topic]++; // number of instances of word assigned to topic j in doc m
+                if (!nw_inf.get(m).containsKey(w)) {
+                    int[] nw_inf_m_w = new int[K];
+                    for (int k = 0; k < K; k++) {
+                        nw_inf_m_w[k] = 0;
+                    }
+                    nw_inf.get(m).put(w, nw_inf_m_w);
+                }
+
+                nw_inf.get(m).get(w)[topic]++; // number of instances of word assigned to topic j in doc m
+                //nw_inf[m][w][topic]++; // number of instances of word assigned to topic j in doc m
                 nwsum_inf[m][topic]++; // total number of words assigned to topic j in doc m
             }
         }
@@ -266,57 +282,39 @@ public class Model {
         }
     }
 
-    protected void initSSInf()
-    {
-        nw_inf = new int[M][V][K];
-        for (int m = 0; m < M; m++) {
-            for (int w = 0; w < V; w++) {
-                for (int k = 0; k < K; k++) {
-                    nw_inf[m][w][k] = 0;
-                }
-            }
-        }
-
-        nwsum_inf = new int[M][K];
-        for (int m = 0; m < M; m++) {
-            for (int k = 0; k < K; k++) {
-                nwsum_inf[m][k] = 0;
-            }
-        }
-    }
-
     //---------------------------------------------------------------
     //	Update Methods
     //---------------------------------------------------------------
 
-    public void updateTheta(){
-        for (int m = 0; m < M; m++){
-            for (int k = 0; k < K; k++){
-                //theta[m][k] = (nd[m][k] + alpha) / (ndsum[m] + K * alpha);
+    public void updateTheta()
+    {
+        for (int m = 0; m < M; m++) {
+            for (int k = 0; k < K; k++) {
                 theta[m][k] += nd[m][k];
             }
         }
     }
-    public void updatePhi(){
-        for (int k = 0; k < K; k++){
-            for (int w = 0; w < V; w++){
-                //phi[k][w] = (nw[w][k] + beta) / (nwsum[k] + V * beta);
+
+    public void updatePhi()
+    {
+        for (int k = 0; k < K; k++) {
+            for (int w = 0; w < V; w++) {
                 phi[k][w] += nw[w][k];
             }
         }
     }
 
     // for inference
-    public void updatePhi(Model trnModel){
-        for (int k = 0; k < K; k++){
-            for (int _w = 0; _w < V; _w++){
-                Integer id = data.lid2gid.get(_w);
-                if (id != null){
-                    //phi[k][_w] = (trnModel.nw[id][k] + nw[_w][k] + beta) / (nwsum[k] + nwsum[k] + trnModel.V * beta);
+    public void updatePhi(Model trnModel)
+    {
+        for (int k = 0; k < K; k++) {
+            for (int _w = 0; _w < V; _w++) {
+                if (data.lid2gid.containsKey(_w)) {
+                    int id = data.lid2gid.get(_w);
                     phi[k][_w] += trnModel.nw[id][k];
                 }
-            }//end foreach word
-        }// end foreach topic
+            } //end foreach word
+        } // end foreach topic
     }
 
     //---------------------------------------------------------------
@@ -485,7 +483,7 @@ public class Model {
             }
 
             for (int k = 0; k < K; k++){
-                List<Pair> wordsProbsList = new ArrayList<Pair>(); 
+                ArrayList<Pair> wordsProbsList = new ArrayList<Pair>(); 
                 for (int w = 0; w < V; w++){
                     Pair p = new Pair(w, phi[k][w], false);
 
@@ -599,7 +597,7 @@ public class Model {
                             new FileInputStream(tassignFile)), "UTF-8"));
 
             String line;
-            z = new Vector[M];			
+            z = new TIntArrayList[M];			
             data = new LDADataset();
             data.setM(M);
             data.V = V;			
@@ -609,8 +607,8 @@ public class Model {
 
                 int length = tknr.countTokens();
 
-                Vector<Integer> words = new Vector<Integer>();
-                Vector<Integer> topics = new Vector<Integer>();
+                TIntArrayList words = new TIntArrayList();
+                TIntArrayList topics = new TIntArrayList();
                 for (j = 0; j < length; j++){
                     String token = tknr.nextToken();
 
@@ -629,7 +627,7 @@ public class Model {
                 data.setDoc(doc, i);
 
                 //assign values for z
-                z[i] = new Vector<Integer>();
+                z[i] = new TIntArrayList();
                 for (j = 0; j < topics.size(); j++){
                     z[i].add(topics.get(j));
                 }

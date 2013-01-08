@@ -33,12 +33,11 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Vector;
 import java.util.zip.GZIPInputStream;
+
+import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.set.hash.TIntHashSet;
 
 public class LDADataset {
     //---------------------------------------------------------------
@@ -52,7 +51,7 @@ public class LDADataset {
 
     // map from local coordinates (id) to global ones 
     // null if the global dictionary is not set
-    public Map<Integer, Integer> lid2gid = null; 
+    public TIntIntHashMap lid2gid = null; 
 
     //link to a global dictionary (optional), null for train data, not null for test data
     public Dictionary globalDict = null;	 		
@@ -67,7 +66,7 @@ public class LDADataset {
 
     public void setDictionary(Dictionary globalDict)
     {
-        lid2gid = new HashMap<Integer, Integer>();
+        lid2gid = new TIntIntHashMap();
         this.globalDict = globalDict;
     }
 
@@ -91,7 +90,7 @@ public class LDADataset {
     public void addDoc(String str, boolean unlabeled)
     {
         // read document labels (if provided)
-        ArrayList<Integer> labels = null;
+        TIntArrayList labels = null;
         if (str.startsWith("[")) {
             String[] labelsBoundary = str.
                 substring(1). // remove initial '['
@@ -102,7 +101,7 @@ public class LDADataset {
             // parse labels (unless we're ignoring the labels)
             if (!unlabeled) {
                 // store labels in a HashSet to ensure uniqueness
-                HashSet<Integer> label_set = new HashSet<Integer>();
+                TIntHashSet label_set = new TIntHashSet();
                 for (String labelStr : labelStrs) {
                     try {
                         label_set.add(Integer.parseInt(labelStr));
@@ -110,13 +109,13 @@ public class LDADataset {
                         System.err.println("Unknown document label ( " + labelStr + " ) for document " + docs.size() + ".");
                     }
                 }
-                labels = new ArrayList<Integer>(label_set);
-                Collections.sort(labels);
+                labels = new TIntArrayList(label_set);
+                labels.sort();
             }
         }
 
         String[] words = str.split("[ \\t\\n]");
-        Vector<Integer> ids = new Vector<Integer>();
+        TIntArrayList ids = new TIntArrayList();
         for (String word : words){
             if (word.trim().equals("")) {
                 continue;
@@ -127,19 +126,13 @@ public class LDADataset {
             if (localDict.contains(word))		
                 _id = localDict.getID(word);
 
-            if (globalDict != null){
+            if (globalDict != null) {
                 //get the global id					
-                Integer id = globalDict.getID(word);
-                //System.out.println(id);
-
-                if (id != null){
+                if (globalDict.contains(word)) {
                     localDict.addWord(word);
 
-                    lid2gid.put(_id, id);
+                    lid2gid.put(_id, globalDict.getID(word));
                     ids.add(_id);
-                }
-                else { //not in global dictionary
-                    //do nothing currently
                 }
             }
             else {
@@ -150,7 +143,7 @@ public class LDADataset {
 
         setDoc(new Document(ids, str, labels), docs.size());
 
-        V = localDict.word2id.size();			
+        V = localDict.word2id.size();
     }
     //---------------------------------------------------------------
     // I/O methods

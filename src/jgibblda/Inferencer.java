@@ -28,15 +28,8 @@
 
 package jgibblda;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
-import java.util.Vector;
 
 public class Inferencer
 {
@@ -122,27 +115,29 @@ public class Inferencer
         newModel.nwsum[topic] -= 1;
         newModel.ndsum[m] -= 1;
 
+        int[] nw_inf_m__w = null;
         if (option.infSeparately) {
-            newModel.nw_inf[m][_w][topic] -= 1;
+            nw_inf_m__w = newModel.nw_inf.get(m).get(_w);
+            nw_inf_m__w[topic] -= 1;
             newModel.nwsum_inf[m][topic] -= 1;
         }
 
         double Vbeta = trnModel.V * newModel.beta;
 
         // get labels for this document
-        ArrayList<Integer> labels = newModel.data.docs.get(m).labels;
+        int[] labels = newModel.data.docs.get(m).labels;
 
         // determine number of possible topics for this document
-        int K_m = (labels == null) ? newModel.K : labels.size();
+        int K_m = (labels == null) ? newModel.K : labels.length;
 
         // do multinomial sampling via cumulative method		
         double[] p = newModel.p;
         for (int k = 0; k < K_m; k++) {
-            topic = labels == null ? k : labels.get(k);
+            topic = labels == null ? k : labels[k];
 
             int nw_k, nwsum_k;
             if (option.infSeparately) {
-                nw_k = newModel.nw_inf[m][_w][topic];
+                nw_k = nw_inf_m__w[topic];
                 nwsum_k = newModel.nwsum_inf[m][topic];
             } else {
                 nw_k = newModel.nw[_w][topic];
@@ -169,7 +164,7 @@ public class Inferencer
 
         // map [0, K_m - 1] topic to [0, K - 1] topic according to labels
         if (labels != null) {
-            topic = labels.get(topic);
+            topic = labels[topic];
         }
 
         // add newly estimated z_i to count variables
@@ -179,7 +174,7 @@ public class Inferencer
         newModel.ndsum[m] += 1;
 
         if (option.infSeparately) {
-            newModel.nw_inf[m][_w][topic] += 1;
+            nw_inf_m__w[topic] += 1;
             newModel.nwsum_inf[m][topic] += 1;
         }
 
