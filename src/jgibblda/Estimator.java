@@ -112,7 +112,7 @@ public class Estimator
         for (int k = 0; k < K_m; k++) {
             topic = labels == null ? k : labels[k];
 
-            p[topic] = (trnModel.nd[m][topic] + trnModel.alpha) *
+            p[k] = (trnModel.nd[m][topic] + trnModel.alpha) *
                 (trnModel.nw[w][topic] + trnModel.beta) /
                 (trnModel.nwsum[topic] + Vbeta);
         }
