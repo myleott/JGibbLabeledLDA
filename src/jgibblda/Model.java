@@ -67,7 +67,6 @@ public class Model {
     public String dfile = "trndocs.dat";
     public boolean unlabeled = false;
     public String modelName = "model";
-    public int modelStatus = Constants.MODEL_STATUS_UNKNOWN; // see Constants class for status of model
     public LDADataset data; // link to a dataset
 
     public int M = 0;          // dataset size (i.e., number of docs)
@@ -143,7 +142,7 @@ public class Model {
             if (option.alpha < 0.0)
                 alpha = trnModel.alpha;
             if (option.beta < 0.0)
-                beta = trnModel.beta;		
+                beta = trnModel.beta;
         }
 
         // read in data
