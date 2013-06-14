@@ -70,8 +70,7 @@ public class Estimator
 
             if ((trnModel.liter == startIter - 1 + trnModel.niters) ||
                     (trnModel.liter > trnModel.nburnin && trnModel.liter % trnModel.samplingLag == 0)) {
-                trnModel.updateTheta();
-                trnModel.updatePhi();
+                trnModel.updateParams();
             }
 
             System.out.print("\b\b\b\b\b\b");

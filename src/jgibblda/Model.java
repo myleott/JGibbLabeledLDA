@@ -77,6 +77,7 @@ public class Model {
     public int niters = 1000;  // number of Gibbs sampling iteration
     public int nburnin = 500;  // number of Gibbs sampling burn-in iterations
     public int samplingLag = 5;// Gibbs sampling sample lag
+    public int numSamples = 1; // number of samples taken
     public int liter = 0;      // the iteration at which the model was saved	
     public int twords = 20;    // print out top words per each topic
 
@@ -285,20 +286,39 @@ public class Model {
     //	Update Methods
     //---------------------------------------------------------------
 
+    public void updateParams()
+    {
+        updateTheta();
+        updatePhi();
+        numSamples++;
+    }
+    public void updateParams(Model trnModel)
+    {
+        updateTheta();
+        updatePhi(trnModel);
+        numSamples++;
+    }
+
     public void updateTheta()
     {
+        double Kalpha = K * alpha;
         for (int m = 0; m < M; m++) {
             for (int k = 0; k < K; k++) {
-                theta[m][k] += nd[m][k];
+                if (numSamples > 1) theta[m][k] *= numSamples - 1; // convert from mean to sum
+                theta[m][k] += (nd[m][k] + alpha) / (ndsum[m] + Kalpha);
+                if (numSamples > 1) theta[m][k] /= numSamples; // convert from sum to mean
             }
         }
     }
 
     public void updatePhi()
     {
+        double Vbeta = V * beta;
         for (int k = 0; k < K; k++) {
             for (int w = 0; w < V; w++) {
-                phi[k][w] += nw[w][k];
+                if (numSamples > 1) phi[k][w] *= numSamples - 1; // convert from mean to sum
+                phi[k][w] += (nw[w][k] + beta) / (nwsum[k] + Vbeta);
+                if (numSamples > 1) phi[k][w] /= numSamples; // convert from sum to mean
             }
         }
     }
@@ -306,12 +326,16 @@ public class Model {
     // for inference
     public void updatePhi(Model trnModel)
     {
+        double Vbeta = trnModel.V * beta;
         for (int k = 0; k < K; k++) {
             for (int _w = 0; _w < V; _w++) {
                 if (data.lid2gid.containsKey(_w)) {
                     int id = data.lid2gid.get(_w);
-                    phi[k][_w] += trnModel.nw[id][k];
-                }
+
+                    if (numSamples > 1) phi[k][_w] *= numSamples - 1; // convert from mean to sum
+                    phi[k][_w] += (trnModel.nw[id][k] + nw[_w][k] + beta) / (trnModel.nwsum[k] + nwsum[k] + Vbeta);
+                    if (numSamples > 1) phi[k][_w] /= numSamples; // convert from sum to mean
+                } // else ignore words that don't appear in training
             } //end foreach word
         } // end foreach topic
     }

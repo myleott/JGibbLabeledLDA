@@ -51,9 +51,6 @@ public class Inferencer
         trnModel.init(false);
 
         globalDict = trnModel.data.localDict;
-
-        trnModel.updateTheta();
-        trnModel.updatePhi();
     }
 
     //inference new model ~ getting data from a specified dataset
@@ -62,7 +59,6 @@ public class Inferencer
         newModel = new Model(option, trnModel);
         newModel.init(true);
         newModel.initInf();
-        newModel.updatePhi(trnModel);
 
         System.out.println("Sampling " + newModel.niters + " iterations for inference!");		
         System.out.print("Iteration");
@@ -80,8 +76,7 @@ public class Inferencer
 
             if ((newModel.liter == newModel.niters) ||
                     (newModel.liter > newModel.nburnin && newModel.liter % newModel.samplingLag == 0)) {
-                newModel.updateTheta();
-                newModel.updatePhi();
+                newModel.updateParams(trnModel);
             }
 
             System.out.print("\b\b\b\b\b\b");
@@ -144,7 +139,7 @@ public class Inferencer
                 nwsum_k = newModel.nwsum[topic];
             }
 
-            p[topic] = (newModel.nd[m][topic] + newModel.alpha) *
+            p[k] = (newModel.nd[m][topic] + newModel.alpha) *
                 (trnModel.nw[w][topic] + nw_k + newModel.beta) /
                 (trnModel.nwsum[topic] + nwsum_k + Vbeta);
         }
