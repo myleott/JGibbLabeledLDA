@@ -66,7 +66,7 @@ Please see the [JGibbLDA usage](http://jgibblda.sourceforge.net/#_2.2._Command_L
 
 *   New options have been added:
 
-    **-burnin <int>**: Discard this many initial iterations when taking samples.
+    **-nburnin <int>**: Discard this many initial iterations when taking samples.
 
     **-samplinglag <int>**: The number of iterations between samples.
 
