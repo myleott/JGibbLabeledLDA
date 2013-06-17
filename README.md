@@ -66,6 +66,10 @@ Please see the [JGibbLDA usage](http://jgibblda.sourceforge.net/#_2.2._Command_L
 
 *   New options have been added:
 
+    **-burnin <int>**: Discard this many initial iterations when taking samples.
+
+    **-samplinglag <int>**: The number of iterations between samples.
+
     **-infseparately**: Inference is done separately for each document, as if
     inference for each document was performed in isolation.
 
