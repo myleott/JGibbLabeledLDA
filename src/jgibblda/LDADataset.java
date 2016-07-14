@@ -104,7 +104,7 @@ public class LDADataset {
                 TIntHashSet label_set = new TIntHashSet();
                 for (String labelStr : labelStrs) {
                     try {
-                        label_set.add(Integer.parseInt(labelStr));
+                        label_set.add(Integer.parseInt(labelStr.trim()));
                     } catch (NumberFormatException nfe) {
                         System.err.println("Unknown document label ( " + labelStr + " ) for document " + docs.size() + ".");
                     }
